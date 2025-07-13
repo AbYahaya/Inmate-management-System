@@ -1,83 +1,51 @@
-
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../lib/api';
 import { Search, Filter, Eye, Edit, MoreVertical, Users } from 'lucide-react';
+
+type Cell = {
+  _id: string;
+  cellNumber: string;
+};
+
+type Inmate = {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  inmateId: string;
+  age: number;
+  gender: string;
+  offense: string;
+  admissionDate: string;
+  cell?: Cell | null; // cell can be null or undefined
+  status: string;
+};
+
+const fetchInmates = async (): Promise<Inmate[]> => {
+  const { data } = await api.get('/inmates/');
+  return data as Inmate[];
+};
 
 const InmateList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  // Mock data - replace with API calls
-  const inmates = [
-    {
-      id: 1,
-      inmateId: 'INM-2024-001',
-      firstName: 'John',
-      lastName: 'Doe',
-      age: 32,
-      gender: 'Male',
-      offense: 'Theft',
-      admissionDate: '2024-01-15',
-      cell: 'A-101',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      inmateId: 'INM-2024-002',
-      firstName: 'Jane',
-      lastName: 'Smith',
-      age: 28,
-      gender: 'Female',
-      offense: 'Fraud',
-      admissionDate: '2024-02-10',
-      cell: 'B-205',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      inmateId: 'INM-2023-156',
-      firstName: 'Robert',
-      lastName: 'Brown',
-      age: 45,
-      gender: 'Male',
-      offense: 'Drug Possession',
-      admissionDate: '2023-12-05',
-      cell: 'C-301',
-      status: 'Released'
-    },
-    {
-      id: 4,
-      inmateId: 'INM-2024-003',
-      firstName: 'Sarah',
-      lastName: 'Wilson',
-      age: 35,
-      gender: 'Female',
-      offense: 'Assault',
-      admissionDate: '2024-03-01',
-      cell: 'A-102',
-      status: 'Active'
-    },
-    {
-      id: 5,
-      inmateId: 'INM-2024-004',
-      firstName: 'Michael',
-      lastName: 'Johnson',
-      age: 29,
-      gender: 'Male',
-      offense: 'Burglary',
-      admissionDate: '2024-03-15',
-      cell: 'B-301',
-      status: 'Active'
-    }
-  ];
+  const { data: inmates = [], isLoading, error } = useQuery<Inmate[]>({
+    queryKey: ['inmates'],
+    queryFn: fetchInmates,
+  });
 
-  const filteredInmates = inmates.filter(inmate => {
-    const matchesSearch = 
+  if (isLoading) return <p>Loading inmates...</p>;
+  if (error) return <p>Error loading inmates</p>;
+
+  const filteredInmates = inmates.filter((inmate) => {
+    const matchesSearch =
       inmate.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inmate.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inmate.inmateId.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesFilter = filterStatus === 'all' || inmate.status.toLowerCase() === filterStatus;
-    
+
     return matchesSearch && matchesFilter;
   });
 
@@ -172,7 +140,7 @@ const InmateList = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInmates.map((inmate) => (
-                <tr key={inmate.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={inmate._id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
@@ -190,7 +158,9 @@ const InmateList = () => {
                     <div className="text-sm text-gray-500">Admitted: {inmate.admissionDate}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{inmate.cell}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {inmate.cell ? inmate.cell.cellNumber : 'Unassigned'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={getStatusBadge(inmate.status)}>

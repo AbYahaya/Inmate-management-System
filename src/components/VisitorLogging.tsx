@@ -1,9 +1,30 @@
-
 import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import api from '../lib/api';
 import { UserCheck, Clock, Search, Plus, Calendar } from 'lucide-react';
 
+type VisitorHistoryItem = {
+  id: string;
+  visitorName: string;
+  visitorId: string;
+  inmateName: string;
+  inmateId: string;
+  visitDate: string;
+  visitTime: string;
+  duration?: string;
+  relationship: string;
+  purpose: string;
+  notes?: string;
+  status: string;
+};
+
+const fetchVisitorHistory = async (): Promise<VisitorHistoryItem[]> => {
+  const { data } = await api.get('/visitors/');
+  return Array.isArray(data) ? data : [];
+};
+
 const VisitorLogging = () => {
-  const [activeTab, setActiveTab] = useState('log');
+  const [activeTab, setActiveTab] = useState<'log' | 'history'>('log');
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     visitorName: '',
@@ -15,75 +36,70 @@ const VisitorLogging = () => {
     purpose: '',
     notes: ''
   });
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock data for visitor history
-  const visitorHistory = [
-    {
-      id: 1,
-      visitorName: 'Mary Johnson',
-      visitorId: 'V-2024-001',
-      inmateId: 'INM-2024-001',
-      inmateName: 'John Doe',
-      visitDate: '2024-07-10',
-      visitTime: '14:30',
-      duration: '30 minutes',
-      relationship: 'Sister',
-      purpose: 'Family visit',
-      status: 'Completed'
-    },
-    {
-      id: 2,
-      visitorName: 'David Smith',
-      visitorId: 'V-2024-002',
-      inmateId: 'INM-2024-002',
-      inmateName: 'Jane Smith',
-      visitDate: '2024-07-10',
-      visitTime: '10:00',
-      duration: '45 minutes',
-      relationship: 'Husband',
-      purpose: 'Family visit',
-      status: 'Completed'
-    },
-    {
-      id: 3,
-      visitorName: 'Sarah Wilson',
-      visitorId: 'V-2024-003',
-      inmateId: 'INM-2024-003',
-      inmateName: 'Sarah Wilson',
-      visitDate: '2024-07-09',
-      visitTime: '16:00',
-      duration: '25 minutes',
-      relationship: 'Mother',
-      purpose: 'Family visit',
-      status: 'Completed'
-    }
-  ];
+  const queryClient = useQueryClient();
+
+  const { data: visitorHistory = [], isLoading, error } = useQuery({
+    queryKey: ['visitorHistory'],
+    queryFn: fetchVisitorHistory,
+    initialData: [],
+  });
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    if (errors[e.target.name]) {
+      setErrors({
+        ...errors,
+        [e.target.name]: ''
+      });
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Logging visitor:', formData);
-    // Reset form
-    setFormData({
-      visitorName: '',
-      visitorId: '',
-      inmateId: '',
-      visitDate: '',
-      visitTime: '',
-      relationship: '',
-      purpose: '',
-      notes: ''
-    });
-    alert('Visitor logged successfully!');
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      await api.post('/visitors/', formData);
+      alert('Visitor logged successfully!');
+      setFormData({
+        visitorName: '',
+        visitorId: '',
+        inmateId: '',
+        visitDate: '',
+        visitTime: '',
+        relationship: '',
+        purpose: '',
+        notes: ''
+      });
+      queryClient.invalidateQueries({ queryKey: ['visitorHistory'] });
+    } catch (error: any) {
+      if (error.response?.data) {
+        const backendErrors = error.response.data;
+        const parsedErrors: { [key: string]: string } = {};
+        for (const key in backendErrors) {
+          if (Array.isArray(backendErrors[key])) {
+            parsedErrors[key] = backendErrors[key].join(' ');
+          } else {
+            parsedErrors[key] = backendErrors[key];
+          }
+        }
+        setErrors(parsedErrors);
+      } else {
+        alert('Failed to log visitor. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filteredHistory = visitorHistory.filter(visit =>
+  const filteredHistory = visitorHistory.filter((visit) =>
     visit.visitorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     visit.inmateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     visit.inmateId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -102,6 +118,9 @@ const VisitorLogging = () => {
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
   };
+
+  if (isLoading) return <p>Loading visitor history...</p>;
+  if (error) return <p>Error loading visitor history</p>;
 
   return (
     <div className="space-y-6">
@@ -149,108 +168,123 @@ const VisitorLogging = () => {
 
         <div className="p-6">
           {activeTab === 'log' ? (
-            /* Visitor Logging Form */
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visitor Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="visitorName"
-                    value={formData.visitorName}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter visitor's full name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visitor ID
-                  </label>
-                  <input
-                    type="text"
-                    name="visitorId"
-                    value={formData.visitorId}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="e.g., V-2024-001"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Inmate ID *
-                  </label>
-                  <input
-                    type="text"
-                    name="inmateId"
-                    value={formData.inmateId}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="e.g., INM-2024-001"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Relationship *
-                  </label>
-                  <select
-                    name="relationship"
-                    value={formData.relationship}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="">Select relationship</option>
-                    <option value="spouse">Spouse</option>
-                    <option value="parent">Parent</option>
-                    <option value="sibling">Sibling</option>
-                    <option value="child">Child</option>
-                    <option value="friend">Friend</option>
-                    <option value="attorney">Attorney</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visit Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="visitDate"
-                    value={formData.visitDate}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visit Time *
-                  </label>
-                  <input
-                    type="time"
-                    name="visitTime"
-                    value={formData.visitTime}
-                    onChange={handleFormChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  />
-                </div>
+              {/* Visitor Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Visitor Name *</label>
+                <input
+                  type="text"
+                  name="visitorName"
+                  value={formData.visitorName}
+                  onChange={handleFormChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.visitorName ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter visitor's full name"
+                />
+                {errors.visitorName && <p className="text-red-600 text-xs mt-1">{errors.visitorName}</p>}
               </div>
 
+              {/* Visitor ID */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purpose of Visit
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Visitor ID</label>
+                <input
+                  type="text"
+                  name="visitorId"
+                  value={formData.visitorId}
+                  onChange={handleFormChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.visitorId ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="e.g., V-2024-001"
+                />
+                {errors.visitorId && <p className="text-red-600 text-xs mt-1">{errors.visitorId}</p>}
+              </div>
+
+              {/* Inmate ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Inmate ID *</label>
+                <input
+                  type="text"
+                  name="inmateId"
+                  value={formData.inmateId}
+                  onChange={handleFormChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.inmateId ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="e.g., INM-2024-001"
+                />
+                {errors.inmateId && <p className="text-red-600 text-xs mt-1">{errors.inmateId}</p>}
+              </div>
+
+              {/* Relationship */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Relationship *</label>
+                <select
+                  name="relationship"
+                  value={formData.relationship}
+                  onChange={handleFormChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.relationship ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">Select relationship</option>
+                  <option value="spouse">Spouse</option>
+                  <option value="parent">Parent</option>
+                  <option value="sibling">Sibling</option>
+                  <option value="child">Child</option>
+                  <option value="friend">Friend</option>
+                  <option value="attorney">Attorney</option>
+                  <option value="other">Other</option>
+                </select>
+                {errors.relationship && <p className="text-red-600 text-xs mt-1">{errors.relationship}</p>}
+              </div>
+
+              {/* Visit Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Visit Date *</label>
+                <input
+                  type="date"
+                  name="visitDate"
+                  value={formData.visitDate}
+                  onChange={handleFormChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.visitDate ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.visitDate && <p className="text-red-600 text-xs mt-1">{errors.visitDate}</p>}
+              </div>
+
+              {/* Visit Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Visit Time *</label>
+                <input
+                  type="time"
+                  name="visitTime"
+                  value={formData.visitTime}
+                  onChange={handleFormChange}
+                  required
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.visitTime ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {errors.visitTime && <p className="text-red-600 text-xs mt-1">{errors.visitTime}</p>}
+              </div>
+
+              {/* Purpose */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Purpose of Visit</label>
                 <select
                   name="purpose"
                   value={formData.purpose}
                   onChange={handleFormChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    errors.purpose ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 >
                   <option value="">Select purpose</option>
                   <option value="family-visit">Family Visit</option>
@@ -259,34 +293,38 @@ const VisitorLogging = () => {
                   <option value="medical">Medical</option>
                   <option value="other">Other</option>
                 </select>
+                {errors.purpose && <p className="text-red-600 text-xs mt-1">{errors.purpose}</p>}
               </div>
 
+              {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Notes
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
                 <textarea
                   name="notes"
                   value={formData.notes}
                   onChange={handleFormChange}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors resize-none ${
+                    errors.notes ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter any additional notes about the visit..."
                 />
+                {errors.notes && <p className="text-red-600 text-xs mt-1">{errors.notes}</p>}
               </div>
 
+              {/* Submit Button */}
               <div className="flex justify-end pt-4 border-t border-gray-200">
                 <button
                   type="submit"
-                  className="flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <UserCheck className="h-4 w-4 mr-2" />
-                  Log Visit
+                  {isSubmitting ? 'Logging...' : 'Log Visit'}
                 </button>
               </div>
             </form>
           ) : (
-            /* Visit History */
             <div className="space-y-6">
               {/* Search Bar */}
               <div className="relative">
@@ -350,7 +388,7 @@ const VisitorLogging = () => {
                             </div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <Clock className="h-3 w-3 mr-1" />
-                              {visit.visitTime} ({visit.duration})
+                              {visit.visitTime} {visit.duration ? `(${visit.duration})` : ''}
                             </div>
                           </div>
                         </td>
@@ -369,15 +407,12 @@ const VisitorLogging = () => {
                 </table>
               </div>
 
-              {/* Empty State */}
               {filteredHistory.length === 0 && (
                 <div className="text-center py-12">
                   <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No visits found</h3>
                   <p className="text-gray-500">
-                    {searchTerm
-                      ? 'Try adjusting your search criteria'
-                      : 'No visitor records have been logged yet'}
+                    {searchTerm ? 'Try adjusting your search criteria' : 'No visitor records have been logged yet'}
                   </p>
                 </div>
               )}

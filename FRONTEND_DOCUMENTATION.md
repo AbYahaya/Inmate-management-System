@@ -305,12 +305,6 @@ npm run build
 npm run preview
 ```
 
-### Deployment Platforms
-- **Recommended**: Vercel, Netlify, or GitHub Pages
-- **Requirements**: Node.js 18+ support
-- **Build Output**: `dist/` directory
-
-## Contributing Guidelines
 
 ### Code Standards
 - TypeScript strict mode enabled
@@ -327,17 +321,5 @@ npm run preview
 
 ## Support and Maintenance
 
-### Documentation
-- Component documentation in `/docs`
-- API integration examples
-- Troubleshooting guide
-- Deployment instructions
-
-### Monitoring
-- Error tracking setup ready
-- Performance monitoring integration points
-- User analytics preparation
-
----
 
 *This documentation provides a comprehensive overview of the inmate management system frontend. For specific implementation details, refer to the individual component files and their inline documentation.*

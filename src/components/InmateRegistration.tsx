@@ -1,6 +1,6 @@
-
 import { useState } from 'react';
 import { Save, User, Calendar, FileText } from 'lucide-react';
+import api from '../lib/api';
 
 const InmateRegistration = () => {
   const [formData, setFormData] = useState({
@@ -26,32 +26,55 @@ const InmateRegistration = () => {
     });
   };
 
+  const calculateAge = (dob: string) => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const ageDifMs = Date.now() - birthDate.getTime();
+    const ageDate = new Date(ageDifMs);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Mock API call - replace with actual API integration
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Submitting inmate registration:', formData);
-    setIsSubmitting(false);
-    
-    // Reset form after successful submission
-    setFormData({
-      firstName: '',
-      lastName: '',
-      dateOfBirth: '',
-      gender: '',
-      inmateId: '',
-      admissionDate: '',
-      offense: '',
-      sentenceLength: '',
-      emergencyContact: '',
-      emergencyPhone: '',
-      notes: ''
-    });
-    
-    alert('Inmate registered successfully!');
+
+    try {
+      await api.post('/inmates/', {
+        inmateId: formData.inmateId,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth, // <-- Added
+        age: calculateAge(formData.dateOfBirth),
+        gender: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1),
+        offense: formData.offense,
+        admissionDate: formData.admissionDate,
+        sentenceLength: formData.sentenceLength,
+        emergencyContact: formData.emergencyContact,
+        emergencyPhone: formData.emergencyPhone,
+        notes: formData.notes,
+        //cell: '', // Initially empty, assign later
+        status: 'Active',
+      });
+
+      alert('Inmate registered successfully!');
+      setFormData({
+        firstName: '',
+        lastName: '',
+        dateOfBirth: '',
+        gender: '',
+        inmateId: '',
+        admissionDate: '',
+        offense: '',
+        sentenceLength: '',
+        emergencyContact: '',
+        emergencyPhone: '',
+        notes: ''
+      });
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to register inmate. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

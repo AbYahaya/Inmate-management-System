@@ -1,55 +1,71 @@
+import { useQuery } from '@tanstack/react-query';
+import api from '../lib/api';
+import { Calendar, TrendingUp, Clock, MapPin } from 'lucide-react';
 
-import { Users, Building2, UserCheck, Calendar, TrendingUp, Clock } from 'lucide-react';
+const iconMap: Record<string, React.ElementType> = {
+  Calendar,
+  TrendingUp,
+  Clock,
+  MapPin,
+};
+
+const fetchStats = async (): Promise<Stat[]> => {
+  const { data } = await api.get<Stat[]>('/dashboard/stats/');
+  return data;
+};
+
+const fetchRecentActivity = async (): Promise<Activity[]> => {
+  const { data } = await api.get<Activity[]>('/dashboard/activity/');
+  return data;
+};
+
+const fetchUpcomingReleases = async (): Promise<Release[]> => {
+  const { data } = await api.get<Release[]>('/dashboard/releases/');
+  return data;
+};
+
+type Stat = {
+  title: string;
+  value: number | string;
+  change: string;
+  changeType: 'increase' | 'decrease';
+  color: string;
+  icon: string; // string name from backend
+};
+
+type Activity = {
+  id: string | number;
+  action: string;
+  details: string;
+  time: string;
+};
+
+type Release = {
+  id: string | number;
+  name: string;
+  inmateId: string | number;
+  cell: string | { cellNumber: string | number } | null; // can be string or populated object or null
+  releaseDate: string;
+};
 
 const Dashboard = () => {
-  // Mock data - replace with API calls
-  const stats = [
-    {
-      title: 'Total Inmates',
-      value: '247',
-      change: '+5',
-      changeType: 'increase',
-      icon: Users,
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'Available Cells',
-      value: '12',
-      change: '-2',
-      changeType: 'decrease',
-      icon: Building2,
-      color: 'bg-green-500'
-    },
-    {
-      title: 'Visitors Today',
-      value: '18',
-      change: '+3',
-      changeType: 'increase',
-      icon: UserCheck,
-      color: 'bg-purple-500'
-    },
-    {
-      title: 'Releases This Week',
-      value: '4',
-      change: '+1',
-      changeType: 'increase',
-      icon: Calendar,
-      color: 'bg-orange-500'
-    }
-  ];
+  const { data: stats = [], isLoading: statsLoading } = useQuery<Stat[]>({
+    queryKey: ['dashboardStats'],
+    queryFn: fetchStats,
+    initialData: [],
+  });
+  const { data: recentActivity = [], isLoading: activityLoading } = useQuery<Activity[]>({
+    queryKey: ['dashboardActivity'],
+    queryFn: fetchRecentActivity,
+    initialData: [],
+  });
+  const { data: upcomingReleases = [], isLoading: releasesLoading } = useQuery<Release[]>({
+    queryKey: ['dashboardReleases'],
+    queryFn: fetchUpcomingReleases,
+    initialData: [],
+  });
 
-  const recentActivity = [
-    { id: 1, action: 'New inmate registered', details: 'John Doe - ID: INM-2024-001', time: '2 hours ago' },
-    { id: 2, action: 'Visitor logged', details: 'Sarah Smith visited Jane Doe', time: '4 hours ago' },
-    { id: 3, action: 'Cell transfer', details: 'Mike Johnson moved to Cell B-205', time: '6 hours ago' },
-    { id: 4, action: 'Inmate released', details: 'Robert Brown - ID: INM-2023-156', time: '1 day ago' },
-  ];
-
-  const upcomingReleases = [
-    { id: 1, name: 'Alice Cooper', inmateId: 'INM-2023-045', releaseDate: '2024-07-15', cell: 'A-101' },
-    { id: 2, name: 'David Wilson', inmateId: 'INM-2023-089', releaseDate: '2024-07-18', cell: 'B-203' },
-    { id: 3, name: 'Emma Davis', inmateId: 'INM-2023-134', releaseDate: '2024-07-22', cell: 'C-301' },
-  ];
+  if (statsLoading || activityLoading || releasesLoading) return <p>Loading dashboard...</p>;
 
   return (
     <div className="space-y-6">
@@ -62,7 +78,7 @@ const Dashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
-          const Icon = stat.icon;
+          const Icon = iconMap[stat.icon] || Calendar; // fallback icon
           return (
             <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
@@ -85,8 +101,8 @@ const Dashboard = () => {
         })}
       </div>
 
+      {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
@@ -116,18 +132,27 @@ const Dashboard = () => {
             <Calendar className="h-5 w-5 text-gray-400" />
           </div>
           <div className="space-y-4">
-            {upcomingReleases.map((release) => (
-              <div key={release.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{release.name}</p>
-                  <p className="text-xs text-gray-500">{release.inmateId} • Cell {release.cell}</p>
+            {upcomingReleases.map((release) => {
+              // Determine cell number string safely
+              let cellNumber = 'Unassigned';
+              if (typeof release.cell === 'string' || typeof release.cell === 'number') {
+                cellNumber = String(release.cell);
+              } else if (release.cell && typeof release.cell === 'object' && 'cellNumber' in release.cell) {
+                cellNumber = String(release.cell.cellNumber);
+              }
+              return (
+                <div key={release.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{release.name}</p>
+                    <p className="text-xs text-gray-500">{release.inmateId} • Cell {cellNumber}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-blue-600">{release.releaseDate}</p>
+                    <p className="text-xs text-gray-500">Release Date</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-blue-600">{release.releaseDate}</p>
-                  <p className="text-xs text-gray-500">Release Date</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
