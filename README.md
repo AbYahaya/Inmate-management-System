@@ -1,73 +1,152 @@
-# Welcome to your Lovable project
+# Inmate Management System
 
-## Project info
+## Overview
 
-**URL**: https://lovable.dev/projects/171409fb-35c0-4fb0-a0ca-0ab865ff36c0
+This is a web-based **Inmate Management System (IMS)** designed to replace manual, paper-based records traditionally used in correctional facilities. Built with modern technologies—React and TypeScript for the frontend, Node.js and Express for the backend, and MongoDB for data storage—the system automates inmate registration, cell management, visitor logging, and reporting.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Inmate Management**: Register, update, and search inmate profiles including personal details, offense, admission date, cell assignment, and notes.
+- **Cell Management**: Create and manage cells, monitor occupancy, assign and transfer inmates, manage cell status (Available, Full, Maintenance).
+- **Visitor Logging**: Record visitor details linked to inmates, track visit dates and reasons.
+- **Dashboard & Reporting**: Visual statistics for total inmates, new admissions, cell occupancy, and upcoming releases along with recent activity logs.
+- **Responsive UI**: Clean, intuitive interface built with React and Tailwind CSS.
+- **API-driven**: Backend REST API built with Express and MongoDB, supporting efficient data access and manipulation.
 
-**Use Lovable**
+## Technologies Used
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/171409fb-35c0-4fb0-a0ca-0ab865ff36c0) and start prompting.
+| Layer      | Technology               |
+|------------|--------------------------|
+| Frontend   | React, TypeScript, Tailwind CSS, React Query, Axios |
+| Backend    | Node.js, Express, Mongoose (MongoDB ODM)             |
+| Database   | MongoDB                                           |
 
-Changes made via Lovable will be committed automatically to this repo.
+## Installation and Setup
 
-**Use your preferred IDE**
+### Prerequisites
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Node.js** (v16 or higher)
+- **MongoDB** (local or remote)
+- **npm** or **yarn**
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Backend Setup
 
-Follow these steps:
+1. Navigate to the backend directory:
+cd inmate-management-backend
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+text
+2. Install dependencies:
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+text
+3. Create a `.env` file for environment variables, e.g.:
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/inmate_management_db
+JWT_SECRET=your_jwt_secret
 
-# Step 3: Install the necessary dependencies.
-npm i
+text
+4. Start the server:
+npm start
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+text
+or for development with auto-restart:
 npm run dev
-```
 
-**Edit a file directly in GitHub**
+text
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Frontend Setup
 
-**Use GitHub Codespaces**
+1. Navigate to the frontend directory:
+cd inmate-management-frontend
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+text
+2. Install dependencies:
+npm install
 
-## What technologies are used for this project?
+text
+3. Start the React development server:
+npm run dev
 
-This project is built with:
+text
+4. The application should now be accessible at `http://localhost:3000` (or the port your frontend uses).
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## API Endpoints
 
-## How can I deploy this project?
+### Inmate Endpoints
 
-Simply open [Lovable](https://lovable.dev/projects/171409fb-35c0-4fb0-a0ca-0ab865ff36c0) and click on Share -> Publish.
+| Method | URL           | Description                         |
+|--------|---------------|-----------------------------------|
+| GET    | `/inmates/`    | Get all inmates with related info |
+| POST   | `/inmates/`    | Register a new inmate              |
+| PUT    | `/inmates/:id` | Update inmate profile             |
 
-## Can I connect a custom domain to my Lovable project?
+### Cell Endpoints
 
-Yes, you can!
+| Method | URL             | Description                     |
+|--------|-----------------|---------------------------------|
+| GET    | `/cells/`       | Get all cells                   |
+| POST   | `/cells/`       | Create a new cell              |
+| POST   | `/cells/:id/assign` | Assign inmate to a cell  |
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Visitor Endpoints
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+| Method | URL            | Description               |
+|--------|----------------|---------------------------|
+| GET    | `/visitors/`    | List visitors              |
+| POST   | `/visitors/`    | Log a new visitor          |
+
+### Dashboard Endpoints
+
+| Method | URL                 | Description                    |
+|--------|---------------------|--------------------------------|
+| GET    | `/dashboard/stats`  | Get aggregated system stats    |
+| GET    | `/dashboard/activity`| Get recent activities          |
+| GET    | `/dashboard/releases`| Get upcoming inmate releases  |
+
+## Usage
+
+- Access the UI and use dashboard for quick overview.
+- Register inmates via the inmate module.
+- Manage cells, assign inmates, and monitor occupancy.
+- Log visitors linked to inmates.
+- Retrieve reports and analytics from the dashboard.
+
+## Development Notes
+
+- The backend uses Express middleware to support JSON parsing, routing, and error handling.
+- React Query is used on the frontend for efficient asynchronous data fetching and caching.
+- MongoDB relationships use Mongoose population for linked documents such as inmates and cells.
+- The current version omits authentication; it is planned as a future enhancement.
+- Notes and inmate details can be viewed in modals for better user experience.
+
+## Extending the Project
+
+- Implement user authentication and role-based access.
+- Add biometric integration for inmate identification.
+- Enhance reporting with export options (PDF, CSV).
+- Mobile app companion for field access.
+- Automated backups and audit trails.
+
+## Troubleshooting
+
+- Ensure MongoDB is running and accessible.
+- Verify API base URLs in frontend `lib/api.ts`.
+- Use browser DevTools Network tab to debug fetch requests.
+- Backend logs provide detailed error messages.
+- For authentication errors in future versions, verify JWT token presence and validity.
+
+## Contribution
+
+This project welcomes contributions to improve features, fix bugs, or add enhancements. Please fork the repository, create a branch for your changes, and submit a pull request for review.
+
+## License
+
+Specify project license here (e.g., MIT License).
+
+## Contact
+
+For questions or support, contact [Your Name] at [your.email@example.com].
+
+---
+
+*Project last updated: Tuesday, July 15, 2025*

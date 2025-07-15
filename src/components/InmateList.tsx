@@ -19,6 +19,7 @@ type Inmate = {
   admissionDate: string;
   cell?: Cell | null; // cell can be null or undefined
   status: string;
+  notes?: string; // added notes field
 };
 
 const fetchInmates = async (): Promise<Inmate[]> => {
@@ -29,6 +30,11 @@ const fetchInmates = async (): Promise<Inmate[]> => {
 const InmateList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // State for notes modal
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedInmateNotes, setSelectedInmateNotes] = useState<string | null>(null);
+  const [selectedInmateName, setSelectedInmateName] = useState<string | null>(null);
 
   const { data: inmates = [], isLoading, error } = useQuery<Inmate[]>({
     queryKey: ['inmates'],
@@ -61,6 +67,20 @@ const InmateList = () => {
       default:
         return `${baseClasses} bg-gray-100 text-gray-800`;
     }
+  };
+
+  // Open notes modal
+  const openNotesModal = (inmate: Inmate) => {
+    setSelectedInmateNotes(inmate.notes?.trim() || 'No additional notes.');
+    setSelectedInmateName(`${inmate.firstName} ${inmate.lastName}`);
+    setShowNotesModal(true);
+  };
+
+  // Close notes modal
+  const closeNotesModal = () => {
+    setShowNotesModal(false);
+    setSelectedInmateNotes(null);
+    setSelectedInmateName(null);
   };
 
   return (
@@ -169,7 +189,11 @@ const InmateList = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900 p-1 rounded-lg hover:bg-blue-50 transition-colors">
+                      <button
+                        onClick={() => openNotesModal(inmate)}
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        title="View Notes"
+                      >
                         <Eye className="h-4 w-4" />
                       </button>
                       <button className="text-gray-600 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-50 transition-colors">
@@ -197,6 +221,26 @@ const InmateList = () => {
               ? 'Try adjusting your search or filter criteria'
               : 'No inmates have been registered yet'}
           </p>
+        </div>
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full">
+            <h2 className="text-xl font-semibold mb-4">
+              Notes for {selectedInmateName}
+            </h2>
+            <p className="whitespace-pre-wrap">{selectedInmateNotes}</p>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={closeNotesModal}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
